@@ -30,6 +30,10 @@ main_kb = ReplyKeyboardMarkup(keyboard=[
 def auth(user_id):
     return user_id in ALLOWED_USERS
 
+# Принудительно создаём таблицы перед каждым обращением (на всякий случай)
+def ensure_db():
+    init_db()
+
 @dp.message(Command("start"))
 async def start(message: types.Message):
     if not auth(message.from_user.id):
@@ -41,6 +45,7 @@ async def start(message: types.Message):
 async def orders_menu(message: types.Message):
     if not auth(message.from_user.id):
         return
+    ensure_db()
     conn = sqlite3.connect(DB)
     c = conn.cursor()
     c.execute("SELECT id, client, tariff, amount, executor, status, created_at FROM orders ORDER BY id DESC LIMIT 10")
@@ -73,6 +78,7 @@ async def orders_menu(message: types.Message):
 async def stats_menu(message: types.Message):
     if not auth(message.from_user.id):
         return
+    ensure_db()
     conn = sqlite3.connect(DB)
     c = conn.cursor()
     c.execute("SELECT SUM(executor_share) FROM orders WHERE executor='ruslan'")
@@ -112,6 +118,7 @@ async def take_callback(callback: types.CallbackQuery):
     if not auth(callback.from_user.id):
         await callback.answer("Доступ запрещён", show_alert=True)
         return
+    ensure_db()
     order_id = int(callback.data.split("_")[1])
     user_id = callback.from_user.id
     executor = 'ruslan' if user_id == ALLOWED_USERS[0] else 'daniil'
@@ -142,6 +149,7 @@ async def done_callback(callback: types.CallbackQuery):
     if not auth(callback.from_user.id):
         await callback.answer("Доступ запрещён", show_alert=True)
         return
+    ensure_db()
     order_id = int(callback.data.split("_")[1])
     user_id = callback.from_user.id
     executor = 'ruslan' if user_id == ALLOWED_USERS[0] else 'daniil'
@@ -169,7 +177,7 @@ async def done_callback(callback: types.CallbackQuery):
 
 async def main():
     logging.info("Admin bot starting (v2 with buttons)...")
-    init_db()
+    init_db()  # всё равно вызываем при старте
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
