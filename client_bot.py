@@ -1,5 +1,6 @@
 import os
 import asyncio
+import logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -8,7 +9,13 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from database import init_db, add_order
 
+# Настройка логирования, чтобы видеть ошибки
+logging.basicConfig(level=logging.INFO)
+
 TOKEN = os.getenv("CLIENT_BOT_TOKEN")
+if not TOKEN:
+    raise ValueError("CLIENT_BOT_TOKEN не задан!")
+
 RUSLAN_ID = 6312016802
 DANIIL_ID = 5222385918
 
@@ -34,6 +41,7 @@ tariff_kb = ReplyKeyboardMarkup(keyboard=[
 
 @dp.message(Command("start"))
 async def start(message: types.Message, state: FSMContext):
+    logging.info(f"User {message.from_user.id} started bot")
     await message.answer("Привет! Я бот студии 2D Design. Что будем делать?", reply_markup=type_kb)
     await state.set_state(Order.design_type)
 
@@ -107,6 +115,7 @@ async def process_tariff(message: types.Message, state: FSMContext):
     await state.clear()
 
 async def main():
+    logging.info("Client bot starting...")
     init_db()
     await dp.start_polling(bot)
 
