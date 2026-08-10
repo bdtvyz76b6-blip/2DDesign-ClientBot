@@ -8,7 +8,7 @@ from aiogram.types import (
     ReplyKeyboardMarkup, KeyboardButton,
     InlineKeyboardMarkup, InlineKeyboardButton
 )
-from database import DB, executor_name, STATUS_EMOJI
+from database import DB, executor_name, STATUS_EMOJI, init_db  # <-- теперь импортируем init_db
 
 logging.basicConfig(level=logging.INFO)
 
@@ -21,7 +21,6 @@ ALLOWED_USERS = [6312016802, 5222385918]  # Руслан, Даниил
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# ---------- клавиатуры ----------
 main_kb = ReplyKeyboardMarkup(keyboard=[
     [KeyboardButton(text="📋 Заказы")],
     [KeyboardButton(text="📊 Статистика")],
@@ -31,7 +30,6 @@ main_kb = ReplyKeyboardMarkup(keyboard=[
 def auth(user_id):
     return user_id in ALLOWED_USERS
 
-# ---------- /start и главное меню ----------
 @dp.message(Command("start"))
 async def start(message: types.Message):
     if not auth(message.from_user.id):
@@ -39,28 +37,23 @@ async def start(message: types.Message):
         return
     await message.answer("Админ-бот 2D Design. Выберите действие:", reply_markup=main_kb)
 
-# ---------- кнопка "Заказы" ----------
 @dp.message(lambda msg: msg.text == "📋 Заказы")
 async def orders_menu(message: types.Message):
     if not auth(message.from_user.id):
         return
-    # Показываем последние 10 заказов с кнопками управления
     conn = sqlite3.connect(DB)
     c = conn.cursor()
     c.execute("SELECT id, client, tariff, amount, executor, status, created_at FROM orders ORDER BY id DESC LIMIT 10")
     rows = c.fetchall()
     conn.close()
-
     if not rows:
         await message.answer("Заказов пока нет.")
         return
-
     for row in rows:
         order_id, client, tariff, amount, executor, status, created_at = row
         status_text = STATUS_EMOJI.get(status, status)
         exec_text = executor_name(executor) if executor else "не назначен"
         date_str = created_at[:16] if created_at else "?"
-
         text = (
             f"<b>#{order_id}</b> {status_text}\n"
             f"Тариф: {tariff} ({amount}₽)\n"
@@ -68,18 +61,14 @@ async def orders_menu(message: types.Message):
             f"Исполнитель: {exec_text}\n"
             f"Создан: {date_str}"
         )
-
-        # Кнопки действий для заказа
         btns = []
         if status == "new" and executor is None:
             btns.append(InlineKeyboardButton(text="Взять", callback_data=f"take_{order_id}"))
         if status == "in_progress" or (status == "new" and executor is not None):
             btns.append(InlineKeyboardButton(text="✅ Выполнен", callback_data=f"done_{order_id}"))
         keyboard = InlineKeyboardMarkup(inline_keyboard=[btns]) if btns else None
-
         await message.answer(text, parse_mode="HTML", reply_markup=keyboard)
 
-# ---------- кнопка "Статистика" ----------
 @dp.message(lambda msg: msg.text == "📊 Статистика")
 async def stats_menu(message: types.Message):
     if not auth(message.from_user.id):
@@ -107,7 +96,6 @@ async def stats_menu(message: types.Message):
         parse_mode="HTML"
     )
 
-# ---------- кнопка "Админы" ----------
 @dp.message(lambda msg: msg.text == "👥 Админы")
 async def admins_menu(message: types.Message):
     if not auth(message.from_user.id):
@@ -119,7 +107,6 @@ async def admins_menu(message: types.Message):
         parse_mode="HTML"
     )
 
-# ---------- обработка нажатий inline-кнопок ----------
 @dp.callback_query(lambda c: c.data.startswith("take_"))
 async def take_callback(callback: types.CallbackQuery):
     if not auth(callback.from_user.id):
@@ -128,7 +115,6 @@ async def take_callback(callback: types.CallbackQuery):
     order_id = int(callback.data.split("_")[1])
     user_id = callback.from_user.id
     executor = 'ruslan' if user_id == ALLOWED_USERS[0] else 'daniil'
-
     conn = sqlite3.connect(DB)
     c = conn.cursor()
     c.execute("SELECT executor, status FROM orders WHERE id=?", (order_id,))
@@ -159,7 +145,6 @@ async def done_callback(callback: types.CallbackQuery):
     order_id = int(callback.data.split("_")[1])
     user_id = callback.from_user.id
     executor = 'ruslan' if user_id == ALLOWED_USERS[0] else 'daniil'
-
     conn = sqlite3.connect(DB)
     c = conn.cursor()
     c.execute("SELECT executor, status FROM orders WHERE id=?", (order_id,))
@@ -184,6 +169,7 @@ async def done_callback(callback: types.CallbackQuery):
 
 async def main():
     logging.info("Admin bot starting (v2 with buttons)...")
+    init_db()   # <-- создаёт таблицы, если их нет
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
