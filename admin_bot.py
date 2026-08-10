@@ -6,7 +6,7 @@ from aiogram.filters import Command
 from database import DB, executor_name, STATUS_EMOJI
 
 TOKEN = os.getenv("ADMIN_BOT_TOKEN")
-ALLOWED_USERS = [123456789, 987654321]  # твой Telegram ID и Даниила
+ALLOWED_USERS = [6312016802, 5222385918]  # Руслан, Даниил
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
