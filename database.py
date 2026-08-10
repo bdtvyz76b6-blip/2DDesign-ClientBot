@@ -1,7 +1,6 @@
 import sqlite3
-import os
 
-DB = "orders.db"   # теперь база хранится прямо в корне проекта
+DB = "orders.db"
 
 def init_db():
     conn = sqlite3.connect(DB)
