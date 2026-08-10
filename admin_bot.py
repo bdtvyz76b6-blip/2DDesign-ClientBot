@@ -1,11 +1,17 @@
 import os
 import asyncio
+import logging
 import sqlite3
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from database import DB, executor_name, STATUS_EMOJI
 
+logging.basicConfig(level=logging.INFO)
+
 TOKEN = os.getenv("ADMIN_BOT_TOKEN")
+if not TOKEN:
+    raise ValueError("ADMIN_BOT_TOKEN не задан!")
+
 ALLOWED_USERS = [6312016802, 5222385918]  # Руслан, Даниил
 
 bot = Bot(token=TOKEN)
@@ -17,6 +23,7 @@ def auth(user_id):
 @dp.message(Command("start"))
 async def start(message: types.Message):
     if not auth(message.from_user.id):
+        logging.warning(f"Unauthorized access from {message.from_user.id}")
         return
     await message.answer("Админ-бот 2D Design. Команды:\n/orders, /my, /take, /done, /stats")
 
@@ -162,6 +169,7 @@ async def stats_admin(message: types.Message):
     )
 
 async def main():
+    logging.info("Admin bot starting...")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
