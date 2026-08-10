@@ -9,7 +9,6 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from database import init_db, add_order
 
-# Настройка логирования, чтобы видеть ошибки
 logging.basicConfig(level=logging.INFO)
 
 TOKEN = os.getenv("CLIENT_BOT_TOKEN")
