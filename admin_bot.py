@@ -8,7 +8,7 @@ from aiogram.types import (
     ReplyKeyboardMarkup, KeyboardButton,
     InlineKeyboardMarkup, InlineKeyboardButton
 )
-from database import DB, executor_name, STATUS_EMOJI, init_db  # <-- теперь импортируем init_db
+from database import DB, executor_name, STATUS_EMOJI, init_db
 
 logging.basicConfig(level=logging.INFO)
 
@@ -169,7 +169,7 @@ async def done_callback(callback: types.CallbackQuery):
 
 async def main():
     logging.info("Admin bot starting (v2 with buttons)...")
-    init_db()   # <-- создаёт таблицы, если их нет
+    init_db()
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
