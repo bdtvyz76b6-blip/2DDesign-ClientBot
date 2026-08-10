@@ -1,28 +1,34 @@
 import sqlite3
+import logging
 
 DB = "orders.db"
 
 def init_db():
-    conn = sqlite3.connect(DB)
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS orders (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        client TEXT,
-        design_type TEXT,
-        text TEXT,
-        style TEXT,
-        tariff TEXT,
-        amount INTEGER,
-        executor TEXT,
-        executor_share INTEGER,
-        fund_share INTEGER,
-        status TEXT DEFAULT 'new',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)''')
-    c.execute("INSERT OR IGNORE INTO meta VALUES ('last_assigned', 'daniil')")
-    conn.commit()
-    conn.close()
+    try:
+        conn = sqlite3.connect(DB)
+        c = conn.cursor()
+        c.execute('''CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client TEXT,
+            design_type TEXT,
+            text TEXT,
+            style TEXT,
+            tariff TEXT,
+            amount INTEGER,
+            executor TEXT,
+            executor_share INTEGER,
+            fund_share INTEGER,
+            status TEXT DEFAULT 'new',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        c.execute('''CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)''')
+        c.execute("INSERT OR IGNORE INTO meta VALUES ('last_assigned', 'daniil')")
+        conn.commit()
+        conn.close()
+        logging.info("Database initialized successfully (tables created).")
+    except Exception as e:
+        logging.error(f"Failed to initialize database: {e}")
+        raise
 
 def get_next_executor():
     conn = sqlite3.connect(DB)
