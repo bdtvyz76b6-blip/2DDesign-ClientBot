@@ -9,8 +9,8 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemo
 from database import init_db, add_order
 
 TOKEN = os.getenv("CLIENT_BOT_TOKEN")
-RUSLAN_ID = 123456789   # замени на свой Telegram ID
-DANIIL_ID = 987654321   # замени на ID Даниила
+RUSLAN_ID = 6312016802
+DANIIL_ID = 5222385918
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
