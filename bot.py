@@ -2,6 +2,7 @@ import os
 import asyncio
 import logging
 import sqlite3
+import json
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -10,17 +11,18 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import (
     ReplyKeyboardMarkup, KeyboardButton,
     InlineKeyboardMarkup, InlineKeyboardButton,
-    ReplyKeyboardRemove
+    ReplyKeyboardRemove, WebAppInfo
 )
 
 logging.basicConfig(level=logging.INFO)
 
-# ---------- конфигурация ----------
-TOKEN = os.getenv("BOT_TOKEN")                     # единый токен
+# ---------- Конфигурация ----------
+TOKEN = os.getenv("BOT_TOKEN", "ВАШ_ТОКЕН_ЗДЕСЬ")
 ADMIN_IDS = [6312016802, 5222385918]               # Руслан, Даниил
-SECRET_COMMAND = "/admin2d"                        # команда для входа в админку
+SECRET_COMMAND = "/admin2d"                        # Команда для входа в админку
+WEBAPP_URL = os.getenv("WEBAPP_URL", "https://your-site.onrender.com") # Ссылка на сайт
 
-# ---------- база данных ----------
+# ---------- База данных ----------
 DB = "orders.db"
 
 def init_db():
@@ -37,6 +39,7 @@ def init_db():
         executor TEXT,
         executor_share INTEGER,
         fund_share INTEGER,
+        photo_id TEXT,
         status TEXT DEFAULT 'new',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
@@ -56,15 +59,15 @@ def get_next_executor():
     conn.close()
     return next_exec
 
-def add_order(client, design_type, text, style, tariff, amount):
+def add_order(client, design_type, text, style, tariff, amount, photo_id=None):
     executor = get_next_executor()
     executor_share = int(amount * 0.95)
     fund_share = amount - executor_share
     conn = sqlite3.connect(DB)
     c = conn.cursor()
-    c.execute('''INSERT INTO orders (client, design_type, text, style, tariff, amount, executor, executor_share, fund_share)
-        VALUES (?,?,?,?,?,?,?,?,?)''',
-        (client, design_type, text, style, tariff, amount, executor, executor_share, fund_share))
+    c.execute('''INSERT INTO orders (client, design_type, text, style, tariff, amount, executor, executor_share, fund_share, photo_id)
+        VALUES (?,?,?,?,?,?,?,?,?,?)''',
+        (client, design_type, text, style, tariff, amount, executor, executor_share, fund_share, photo_id))
     order_id = c.lastrowid
     conn.commit()
     conn.close()
@@ -83,12 +86,13 @@ STATUS_EMOJI = {
     'done': '✅ Выполнен'
 }
 
-# ---------- инициализация бота ----------
+# ---------- Инициализация бота ----------
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
-# ---------- клавиатуры ----------
+# ---------- Клавиатуры ----------
 client_kb = ReplyKeyboardMarkup(keyboard=[
+    [KeyboardButton(text="🌐 Открыть сайт 2D Design", web_app=WebAppInfo(url=WEBAPP_URL))],
     [KeyboardButton(text="Логотип"), KeyboardButton(text="Баннер")],
     [KeyboardButton(text="Аватар")]
 ], resize_keyboard=True)
@@ -99,6 +103,10 @@ tariff_kb = ReplyKeyboardMarkup(keyboard=[
     [KeyboardButton(text="Мега (7 вар.) — 650₽")]
 ], resize_keyboard=True)
 
+skip_photo_kb = ReplyKeyboardMarkup(keyboard=[
+    [KeyboardButton(text="➡️ Пропустить фото")]
+], resize_keyboard=True)
+
 admin_kb = ReplyKeyboardMarkup(keyboard=[
     [KeyboardButton(text="📋 Заказы")],
     [KeyboardButton(text="📊 Статистика")],
@@ -106,22 +114,69 @@ admin_kb = ReplyKeyboardMarkup(keyboard=[
     [KeyboardButton(text="🔙 Выйти из админки")]
 ], resize_keyboard=True)
 
-# ---------- FSM для заказа ----------
+# ---------- FSM состояния ----------
 class Order(StatesGroup):
     design_type = State()
     text = State()
     style = State()
     tariff = State()
+    photo = State()
 
-# ---------- общие обработчики ----------
+# ---------- Вход и старт ----------
 @dp.message(Command("start"))
 async def start_cmd(message: types.Message, state: FSMContext):
     await state.clear()
-    # если пользователь админ – всё равно показываем клиентское меню,
-    # в админку он может зайти по секретной команде
-    await message.answer("Привет! Я бот студии 2D Design. Что будем делать?", reply_markup=client_kb)
+    await message.answer(
+        "👋 Привет! Я бот студии **2D Design**.\n\n"
+        "Вы можете сделать быстрое оформление прямо в боте или открыть наш сайт с калькулятором и портфолио!",
+        reply_markup=client_kb,
+        parse_mode="Markdown"
+    )
 
-# ---------- секретная команда ----------
+# ---------- Данные с WebApp (Сайт) ----------
+@dp.message(F.web_app_data)
+async def handle_webapp_data(message: types.Message):
+    try:
+        data = json.loads(message.web_app_data.data)
+        client = message.from_user.username or str(message.from_user.id)
+        design_type = data.get("design_type", "Сайт-заказ")
+        text = data.get("text", "Без описания")
+        style = data.get("style", "Стандартный")
+        tariff = data.get("tariff", "Сайт")
+        amount = int(data.get("amount", 500))
+        photo_url = data.get("photo_url", None)
+
+        order_id, executor = add_order(client, design_type, text, style, tariff, amount, photo_url)
+        exec_name = executor_name(executor)
+
+        await message.answer(
+            f"✅ **Заказ с сайта успешно оформлен!**\n\n"
+            f"📦 **Номер заказа:** #{order_id}\n"
+            f"🎨 **Тип:** {design_type}\n"
+            f"💰 **Сумма:** {amount} ₽\n"
+            f"👤 **Назначен мастер:** {exec_name}\n\n"
+            f"Мастер скоро свяжется с вами!",
+            parse_mode="Markdown"
+        )
+
+        executor_id = ADMIN_IDS[0] if executor == "ruslan" else ADMIN_IDS[1]
+        msg_text = (
+            f"📥 **Новый заказ с САЙТА #{order_id}**\n"
+            f"Клиент: @{client}\n"
+            f"Тип: {design_type}\n"
+            f"Сумма: {amount} ₽\n"
+            f"ТЗ: {text}"
+        )
+        if photo_url:
+            await bot.send_photo(executor_id, photo=photo_url, caption=msg_text, parse_mode="Markdown")
+        else:
+            await bot.send_message(executor_id, msg_text, parse_mode="Markdown")
+
+    except Exception as e:
+        logging.error(f"Ошибка WebApp: {e}")
+        await message.answer("Произошла ошибка при обработке заказа.")
+
+# ---------- Секретная админка ----------
 @dp.message(Command("admin2d"))
 async def admin_login(message: types.Message):
     if message.from_user.id not in ADMIN_IDS:
@@ -129,12 +184,11 @@ async def admin_login(message: types.Message):
         return
     await message.answer("🔐 Админ-панель активирована.", reply_markup=admin_kb)
 
-# ---------- выход из админки ----------
 @dp.message(lambda msg: msg.text == "🔙 Выйти из админки")
 async def admin_logout(message: types.Message):
     await message.answer("Вы вернулись в обычный режим.", reply_markup=client_kb)
 
-# ---------- клиентский сценарий ----------
+# ---------- Клиентский диалог с фото ----------
 @dp.message(lambda msg: msg.text in ["Логотип", "Баннер", "Аватар"])
 async def choose_type(message: types.Message, state: FSMContext):
     await state.update_data(design_type=message.text)
@@ -144,10 +198,7 @@ async def choose_type(message: types.Message, state: FSMContext):
 @dp.message(Order.text)
 async def get_text(message: types.Message, state: FSMContext):
     await state.update_data(text=message.text)
-    await message.answer(
-        "Опиши желаемый стиль (например: строгий чёрно-белый, яркий с градиентом, рукописный каллиграфический):",
-        reply_markup=ReplyKeyboardRemove()
-    )
+    await message.answer("Опиши желаемый стиль (цвета, надписи, тема):")
     await state.set_state(Order.style)
 
 @dp.message(Order.style)
@@ -158,71 +209,89 @@ async def get_style(message: types.Message, state: FSMContext):
 
 @dp.message(Order.tariff)
 async def process_tariff(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    text = data["text"]
-    style = data["style"]
-    design_type = data["design_type"]
     tariff_text = message.text
-
     if "Базовый" in tariff_text:
-        amount = 400
-        tariff = "Базовый"
+        amount, tariff = 400, "Базовый"
     elif "Стандартный" in tariff_text:
-        amount = 550
-        tariff = "Стандартный"
+        amount, tariff = 550, "Стандартный"
     else:
-        amount = 650
-        tariff = "Мега"
+        amount, tariff = 650, "Мега"
+
+    await state.update_data(tariff=tariff, amount=amount)
+    await message.answer(
+        "📷 **Прикрепи пример/референс (фото или картинку):**\nЕсли примеров нет, нажми кнопку «Пропустить».",
+        reply_markup=skip_photo_kb,
+        parse_mode="Markdown"
+    )
+    await state.set_state(Order.photo)
+
+@dp.message(Order.photo)
+async def process_photo(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    photo_id = None
+
+    if message.photo:
+        photo_id = message.photo[-1].file_id
+    elif message.text == "➡️ Пропустить фото":
+        photo_id = None
 
     order_id, executor = add_order(
         client=message.from_user.username or str(message.from_user.id),
-        design_type=design_type,
-        text=text,
-        style=style,
-        tariff=tariff,
-        amount=amount
+        design_type=data["design_type"],
+        text=data["text"],
+        style=data["style"],
+        tariff=data["tariff"],
+        amount=data["amount"],
+        photo_id=photo_id
     )
 
-    exec_name = "Руслан" if executor == "ruslan" else "Даниил"
+    exec_name = executor_name(executor)
     await message.answer(
         f"✅ Ваш заказ принят!\n"
         f"Номер заказа: <b>#{order_id}</b>\n"
-        f"Тариф: {tariff} ({amount} ₽)\n"
-        f"С вами свяжется специалист <b>{exec_name}</b>.\n\n"
-        f"Оплата: перевод на карту по договорённости.",
+        f"Тариф: {data['tariff']} ({data['amount']} ₽)\n"
+        f"С вами свяжется специалист <b>{exec_name}</b>.",
         parse_mode="HTML",
-        reply_markup=client_kb   # возвращаем обычную клавиатуру
+        reply_markup=client_kb
     )
 
-    # уведомление исполнителю
+    # Уведомление исполнителю с ФОТО
     executor_id = ADMIN_IDS[0] if executor == "ruslan" else ADMIN_IDS[1]
-    await bot.send_message(
-        executor_id,
-        f"📥 Новый заказ #{order_id}\n"
+    caption = (
+        f"📥 **Новый заказ #{order_id}**\n"
         f"Клиент: @{message.from_user.username}\n"
-        f"Тип: {design_type}, Стиль: {style}\n"
-        f"Тариф: {tariff} ({amount} ₽)\n"
-        f"Текст: {text}"
+        f"Тип: {data['design_type']}, Стиль: {data['style']}\n"
+        f"Тариф: {data['tariff']} ({data['amount']} ₽)\n"
+        f"Текст: {data['text']}"
     )
+
+    if photo_id:
+        await bot.send_photo(executor_id, photo=photo_id, caption=caption, parse_mode="Markdown")
+    else:
+        await bot.send_message(executor_id, caption, parse_mode="Markdown")
+
     await state.clear()
 
-# ---------- админские кнопки ----------
+# ---------- Админ Панель с Показом Картинки Заказа ----------
 @dp.message(lambda msg: msg.text == "📋 Заказы")
 async def show_orders(message: types.Message):
     if message.from_user.id not in ADMIN_IDS: return
     conn = sqlite3.connect(DB)
     c = conn.cursor()
-    c.execute("SELECT id, client, tariff, amount, executor, status, created_at FROM orders ORDER BY id DESC LIMIT 10")
+    c.execute("SELECT id, client, tariff, amount, executor, status, created_at, photo_id FROM orders ORDER BY id DESC LIMIT 10")
     rows = c.fetchall()
     conn.close()
+
     if not rows:
         await message.answer("Заказов пока нет.")
         return
+
     for row in rows:
-        order_id, client, tariff, amount, executor, status, created_at = row
+        order_id, client, tariff, amount, executor, status, created_at, photo_id = row
         status_text = STATUS_EMOJI.get(status, status)
         exec_text = executor_name(executor) if executor else "не назначен"
         date_str = created_at[:16] if created_at else "?"
+
         text = (
             f"<b>#{order_id}</b> {status_text}\n"
             f"Тариф: {tariff} ({amount}₽)\n"
@@ -230,13 +299,22 @@ async def show_orders(message: types.Message):
             f"Исполнитель: {exec_text}\n"
             f"Создан: {date_str}"
         )
+
         btns = []
         if status == "new" and executor is None:
             btns.append(InlineKeyboardButton(text="Взять", callback_data=f"take_{order_id}"))
         if status == "in_progress" or (status == "new" and executor is not None):
             btns.append(InlineKeyboardButton(text="✅ Выполнен", callback_data=f"done_{order_id}"))
         keyboard = InlineKeyboardMarkup(inline_keyboard=[btns]) if btns else None
-        await message.answer(text, parse_mode="HTML", reply_markup=keyboard)
+
+        # Если к заказу прикреплено ФОТО
+        if photo_id:
+            try:
+                await message.answer_photo(photo=photo_id, caption=text, parse_mode="HTML", reply_markup=keyboard)
+            except Exception:
+                await message.answer(text + f"\n\n🖼️ [Ссылка на референс]({photo_id})", parse_mode="HTML", reply_markup=keyboard)
+        else:
+            await message.answer(text, parse_mode="HTML", reply_markup=keyboard)
 
 @dp.message(lambda msg: msg.text == "📊 Статистика")
 async def show_stats(message: types.Message):
@@ -254,6 +332,7 @@ async def show_stats(message: types.Message):
     c.execute("SELECT COUNT(*) FROM orders WHERE status!='done'")
     active = c.fetchone()[0]
     conn.close()
+
     await message.answer(
         f"📊 <b>2D Design — статистика</b>\n\n"
         f"👤 Руслан заработал: {ruslan} ₽\n"
@@ -274,72 +353,42 @@ async def show_admins(message: types.Message):
         parse_mode="HTML"
     )
 
-# ---------- обработка inline-кнопок (взять/выполнить) ----------
 @dp.callback_query(lambda c: c.data.startswith("take_"))
 async def take_callback(callback: types.CallbackQuery):
-    if callback.from_user.id not in ADMIN_IDS:
-        await callback.answer("Доступ запрещён", show_alert=True)
-        return
+    if callback.from_user.id not in ADMIN_IDS: return
     order_id = int(callback.data.split("_")[1])
     user_id = callback.from_user.id
     executor = 'ruslan' if user_id == ADMIN_IDS[0] else 'daniil'
+
     conn = sqlite3.connect(DB)
     c = conn.cursor()
-    c.execute("SELECT executor, status FROM orders WHERE id=?", (order_id,))
-    row = c.fetchone()
-    if not row:
-        await callback.answer("Заказ не найден", show_alert=True)
-        conn.close()
-        return
-    current_executor, _ = row
-    if current_executor is not None:
-        await callback.answer(f"Уже назначен на {executor_name(current_executor)}", show_alert=True)
-        conn.close()
-        return
     c.execute("UPDATE orders SET executor=?, status='in_progress' WHERE id=?", (executor, order_id))
     conn.commit()
     conn.close()
-    await callback.message.edit_text(
-        callback.message.text + f"\n\n✅ Взял: {executor_name(executor)}",
-        parse_mode="HTML"
-    )
+
+    await callback.message.edit_caption(caption=callback.message.caption + f"\n\n✅ Взял: {executor_name(executor)}", parse_mode="HTML") if callback.message.caption else await callback.message.edit_text(callback.message.text + f"\n\n✅ Взял: {executor_name(executor)}", parse_mode="HTML")
     await callback.answer("Заказ взят!")
 
 @dp.callback_query(lambda c: c.data.startswith("done_"))
 async def done_callback(callback: types.CallbackQuery):
-    if callback.from_user.id not in ADMIN_IDS:
-        await callback.answer("Доступ запрещён", show_alert=True)
-        return
+    if callback.from_user.id not in ADMIN_IDS: return
     order_id = int(callback.data.split("_")[1])
-    user_id = callback.from_user.id
-    executor = 'ruslan' if user_id == ADMIN_IDS[0] else 'daniil'
+
     conn = sqlite3.connect(DB)
     c = conn.cursor()
-    c.execute("SELECT executor, status FROM orders WHERE id=?", (order_id,))
-    row = c.fetchone()
-    if not row:
-        await callback.answer("Заказ не найден", show_alert=True)
-        conn.close()
-        return
-    current_executor, status = row
-    if current_executor != executor:
-        await callback.answer("Вы не назначены на этот заказ", show_alert=True)
-        conn.close()
-        return
     c.execute("UPDATE orders SET status='done' WHERE id=?", (order_id,))
     conn.commit()
     conn.close()
-    await callback.message.edit_text(
-        callback.message.text + "\n\n✅ Выполнен!",
-        parse_mode="HTML"
-    )
-    await callback.answer("Отмечено как выполненное")
 
-# ---------- запуск ----------
+    await callback.message.edit_caption(caption=callback.message.caption + "\n\n✅ Выполнен!", parse_mode="HTML") if callback.message.caption else await callback.message.edit_text(callback.message.text + "\n\n✅ Выполнен!", parse_mode="HTML")
+    await callback.answer("Заказ отмечен выполненным!")
+
+# ---------- Запуск ----------
 async def main():
-    logging.info("Starting unified bot...")
+    logging.info("Starting 2D Design Bot...")
     init_db()
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())
+
