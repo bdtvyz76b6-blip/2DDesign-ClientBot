@@ -64,7 +64,7 @@
 </head>
 <body class="bg-warmgray-950 text-warmgray-100 font-sans antialiased overflow-x-hidden selection:bg-beige-400 selection:text-warmgray-950">
 
-    <!-- Мягкий бежевый фоновый градиент -->
+    <!-- Фоновый неон -->
     <div class="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-gradient-to-b from-beige-300/10 via-beige-400/5 to-transparent blur-3xl pointer-events-none -z-10"></div>
 
     <!-- Шапка сайта -->
@@ -125,7 +125,6 @@
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Карточка 1 -->
                 <div class="glass-card rounded-2xl overflow-hidden group hover:border-beige-300/30 transition duration-300">
                     <div class="h-48 bg-warmgray-800 flex items-center justify-center relative">
                         <div class="absolute inset-0 bg-gradient-to-tr from-warmgray-900 to-warmgray-800"></div>
@@ -137,7 +136,6 @@
                     </div>
                 </div>
 
-                <!-- Карточка 2 -->
                 <div class="glass-card rounded-2xl overflow-hidden group hover:border-beige-300/30 transition duration-300">
                     <div class="h-48 bg-warmgray-800 flex items-center justify-center relative">
                         <div class="absolute inset-0 bg-gradient-to-tr from-warmgray-900 to-warmgray-800"></div>
@@ -149,7 +147,6 @@
                     </div>
                 </div>
 
-                <!-- Карточка 3 -->
                 <div class="glass-card rounded-2xl overflow-hidden group hover:border-beige-300/30 transition duration-300">
                     <div class="h-48 bg-warmgray-800 flex items-center justify-center relative">
                         <div class="absolute inset-0 bg-gradient-to-tr from-warmgray-900 to-warmgray-800"></div>
@@ -238,56 +235,6 @@
         </div>
     </section>
 
-    <!-- Прайс-лист -->
-    <section id="pricing" class="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center max-w-2xl mx-auto mb-16">
-            <h2 class="font-heading text-2xl sm:text-4xl font-bold text-warmgray-50 mb-4">Фиксированные Тарифы</h2>
-            <p class="text-warmgray-300 text-sm sm:text-base">Чёткая стоимость без скрытых платежей</p>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div class="glass-card rounded-3xl p-8 border-warmgray-800 flex flex-col justify-between">
-                <div>
-                    <h3 class="font-heading font-bold text-xl text-warmgray-100 mb-2">Базовый</h3>
-                    <p class="text-xs text-warmgray-400 mb-6">3 варианта исполнения</p>
-                    <div class="font-heading text-3xl font-bold text-beige-300 mb-6">400 ₽</div>
-                    <ul class="space-y-3 text-xs sm:text-sm text-warmgray-300 mb-8">
-                        <li class="flex items-center gap-2"><i class="fa-solid fa-check text-beige-300"></i> Быстрый запуск</li>
-                        <li class="flex items-center gap-2"><i class="fa-solid fa-check text-beige-300"></i> Бесплатные правки</li>
-                    </ul>
-                </div>
-                <button type="button" onclick="scrollToCalc()" class="w-full py-3 rounded-xl border border-warmgray-700 hover:bg-warmgray-800 text-warmgray-200 font-semibold text-xs text-center transition cursor-pointer">Выбрать</button>
-            </div>
-
-            <div class="glass-card rounded-3xl p-8 border-beige-300/40 relative beige-glow flex flex-col justify-between">
-                <span class="absolute -top-3 left-1/2 -translate-x-1/2 bg-beige-300 text-warmgray-950 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">Популярный</span>
-                <div>
-                    <h3 class="font-heading font-bold text-xl text-warmgray-50 mb-2">Стандартный</h3>
-                    <p class="text-xs text-warmgray-400 mb-6">5 вариантов исполнения</p>
-                    <div class="font-heading text-3xl font-bold text-beige-300 mb-6">550 ₽</div>
-                    <ul class="space-y-3 text-xs sm:text-sm text-warmgray-300 mb-8">
-                        <li class="flex items-center gap-2"><i class="fa-solid fa-check text-beige-300"></i> Больше концептов</li>
-                        <li class="flex items-center gap-2"><i class="fa-solid fa-check text-beige-300"></i> Приоритетная правка</li>
-                    </ul>
-                </div>
-                <button type="button" onclick="scrollToCalc()" class="w-full py-3 rounded-xl bg-beige-300 hover:bg-beige-200 text-warmgray-950 font-bold text-xs text-center transition cursor-pointer">Заказать</button>
-            </div>
-
-            <div class="glass-card rounded-3xl p-8 border-warmgray-800 flex flex-col justify-between">
-                <div>
-                    <h3 class="font-heading font-bold text-xl text-warmgray-100 mb-2">Мега</h3>
-                    <p class="text-xs text-warmgray-400 mb-6">7 вариантов исполнения</p>
-                    <div class="font-heading text-3xl font-bold text-beige-300 mb-6">650 ₽</div>
-                    <ul class="space-y-3 text-xs sm:text-sm text-warmgray-300 mb-8">
-                        <li class="flex items-center gap-2"><i class="fa-solid fa-check text-beige-300"></i> Максимальный выбор</li>
-                        <li class="flex items-center gap-2"><i class="fa-solid fa-check text-beige-300"></i> Исходные файлы</li>
-                    </ul>
-                </div>
-                <button type="button" onclick="scrollToCalc()" class="w-full py-3 rounded-xl border border-warmgray-700 hover:bg-warmgray-800 text-warmgray-200 font-semibold text-xs text-center transition cursor-pointer">Выбрать</button>
-            </div>
-        </div>
-    </section>
-
     <!-- Подвал -->
     <footer class="border-t border-warmgray-800/80 bg-warmgray-950 py-10 px-4">
         <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -303,7 +250,6 @@
 
     <!-- Скрипты взаимодействия -->
     <script>
-        // Имя вашего Telegram-бота (без @)
         const BOT_USERNAME = "ddesign2bot";
 
         const tg = window.Telegram?.WebApp;
@@ -312,7 +258,7 @@
                 tg.ready();
                 tg.expand();
             } catch (e) {
-                console.log("Telegram WebApp не обнаружен");
+                console.log("Telegram WebApp не активен");
             }
         }
 
@@ -360,7 +306,7 @@
                 photo_url: photoUrl
             };
 
-            // Проверяем, запущен ли сайт внутри Telegram WebApp
+            // Отправка через Telegram WebApp если открыто внутри Telegram
             if (tg && tg.initData && tg.initData.length > 0) {
                 try {
                     tg.sendData(JSON.stringify(orderData));
@@ -370,23 +316,20 @@
                     redirectToBot(orderData);
                 }
             } else {
-                // Если зашли просто через браузер на телефоне или ПК
                 redirectToBot(orderData);
             }
         }
 
         function redirectToBot(data) {
-            // Формируем реферальную команду или открываем бот
-            const messageText = `Здравствуйте! Хочу заказать ${data.design_type}.\nСумма: ${data.amount} ₽\nТЗ: ${data.text}`;
             alert("Спасибо! Переходим в диалог с ботом @ddesign2bot для подтверждения заказа.");
             window.location.href = `https://t.me/${BOT_USERNAME}?start=site_order`;
         }
 
-        // Автоматический пересчёт при загрузке
         document.addEventListener("DOMContentLoaded", () => {
             calculatePrice();
         });
     </script>
 </body>
 </html>
+
 
